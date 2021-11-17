@@ -1,0 +1,15 @@
+name: light_collect
+schedule:
+  type: cron
+  cron: "*/1 * * * *"
+  priority: 5
+  
+jobs:
+  env:
+    BUCKET_NAME: light-data
+    FILE_NAME: ./light.db
+    ACCESS_KEY_ID: default_access_key_id
+    SECRET_ACCESS_KEY: default_secret_access_key
+  steps:
+    - name: run
+      run: ./collect
