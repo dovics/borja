@@ -32,7 +32,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	cache.AutoArchiveWrapper(c, archivePath, time.Minute)
+
+	archiveManager := cache.AutoArchiveWrapper(c, archivePath, time.Minute)
 	reporter := reporter.New("")
 
 	if err := reporter.SetTrigger(trigger.NewTimeTrigger(time.Second)); err != nil {
@@ -46,10 +47,18 @@ func main() {
 	reporter.Register("light", lightOperator.QueryLight)
 	go reporter.Run()
 
-	exporter := exporter.NewFileExporter(":8080")
-	exporter.Register("data", func() (interface{}, error) {
+	fileExporter := exporter.NewFileExporter(":8080")
+	fileExporter.Register("data", func() (interface{}, error) {
 		return archivePath, nil
 	})
 
+	go fileExporter.Run()
+
+	exporter := exporter.NewDefaultExporter(":8081")
+	exporter.Register("clear", func() (interface{}, error) {
+		return archiveManager.Clear(time.Now())
+	})
+
+	exporter.Register("files", archiveManager.ArchiveFiles)
 	exporter.Run()
 }

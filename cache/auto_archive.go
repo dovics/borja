@@ -1,13 +1,14 @@
 package cache
 
 import (
+	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/dovics/borja/util/log"
 )
 
-const timeFormat = "20060102-150405"
+const timeFormat = "20060102-150405MST"
 
 type AutoArchiveCache struct {
 	Cache
@@ -52,4 +53,34 @@ func (c *AutoArchiveCache) StartAutoArchive(interval time.Duration) {
 
 func (c *AutoArchiveCache) StopAutoArchive() {
 	close(c.stop)
+}
+
+func (c *AutoArchiveCache) Clear(before time.Time) (interface{}, error) {
+	entrys, err := os.ReadDir(c.path)
+	for _, entry := range entrys {
+		t, err := time.Parse(timeFormat, entry.Name())
+		if err != nil {
+			log.Error("file name time parse error: ", err)
+			continue
+		}
+
+		if t.Before(before) {
+			if err := os.Remove(filepath.Join(c.path, entry.Name())); err != nil {
+				log.Error("file remove error: ", err)
+				continue
+			}
+		}
+	}
+
+	return "Finish", err
+}
+
+func (c *AutoArchiveCache) ArchiveFiles() (interface{}, error) {
+	entrys, err := os.ReadDir(c.path)
+	var result []string
+	for _, entry := range entrys {
+		result = append(result, entry.Name())
+	}
+
+	return result, err
 }
