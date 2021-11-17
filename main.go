@@ -14,7 +14,10 @@ import (
 	"github.com/dovics/borja/util/trigger"
 )
 
-const boltdbName = "bolt"
+const (
+	boltdbName  = "bolt"
+	archivePath = "./data"
+)
 
 func main() {
 	config := &serial.Config{Name: "COM4", Baud: 9600, ReadTimeout: time.Second * 5}
@@ -25,11 +28,11 @@ func main() {
 	}
 	lightOperator := operator.NewLightOperator(sensor)
 
-	c, err := cache.NewCache(boltdbName)
+	c, err := cache.NewBlotCache(boltdbName)
 	if err != nil {
 		log.Fatal(err)
 	}
-
+	cache.AutoArchiveWrapper(c, archivePath, time.Minute)
 	reporter := reporter.New("")
 
 	if err := reporter.SetTrigger(trigger.NewTimeTrigger(time.Second)); err != nil {
@@ -43,19 +46,9 @@ func main() {
 	reporter.Register("light", lightOperator.QueryLight)
 	go reporter.Run()
 
-	exporter := exporter.NewExporter()
-	exporter.Register("light", lightOperator.QueryLight)
+	exporter := exporter.NewFileExporter(":8080")
 	exporter.Register("data", func() (interface{}, error) {
-		data, err := c.GetAfter(time.Now().Add(-time.Minute * 15))
-		if err != nil {
-			return nil, err
-		}
-
-		if err := c.ClearBefore(time.Now()); err != nil {
-			return nil, err
-		}
-
-		return data, nil
+		return archivePath, nil
 	})
 
 	exporter.Run()

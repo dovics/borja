@@ -13,11 +13,13 @@ type Exporter interface {
 }
 
 type defaultExporter struct {
+	host     string
 	operates map[string]Operate
 }
 
-func NewExporter() Exporter {
+func NewDefaultExporter(host string) Exporter {
 	return &defaultExporter{
+		host:     host,
 		operates: make(map[string]Operate),
 	}
 }
@@ -45,5 +47,5 @@ func (e *defaultExporter) Run() error {
 		engine.GET(k, handlerWrapper(o))
 	}
 
-	return engine.Run()
+	return engine.Run(e.host)
 }

@@ -1,15 +1,20 @@
 package cache
 
 import (
-	"time"
+	"encoding/json"
+	"os"
 )
 
 type memoryCache struct {
-	m map[string]interface{}
+	path string
+	m    map[string]interface{}
 }
 
-var _ Cache = &memoryCache{
-	m: make(map[string]interface{}),
+func NewMemoryCache(basePath string) *memoryCache {
+	return &memoryCache{
+		path: basePath,
+		m:    make(map[string]interface{}),
+	}
 }
 
 func (c *memoryCache) Add(key string, value interface{}) error {
@@ -17,11 +22,21 @@ func (c *memoryCache) Add(key string, value interface{}) error {
 	return nil
 }
 
-func (c *memoryCache) ClearBefore(time.Time) error {
+func (c *memoryCache) Archive(name string) error {
+	data, err := json.Marshal(c.m)
+	if err != nil {
+		return err
+	}
+
+	file, err := os.Open(name)
+	if err != nil {
+		return err
+	}
+
+	if _, err := file.Write(data); err != nil {
+		return err
+	}
+
 	c.m = make(map[string]interface{})
 	return nil
-}
-
-func (c *memoryCache) GetAfter(time.Time) ([]interface{}, error) {
-	return nil, nil
 }
